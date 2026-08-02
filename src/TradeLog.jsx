@@ -28,6 +28,7 @@ export default function TradeLog() {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openRow, setOpenRow] = useState(null);
+  const [saveError, setSaveError] = useState('');
 
   async function load() {
     setLoading(true);
@@ -63,6 +64,7 @@ export default function TradeLog() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setSaveError('');
     const payload = {
       ...form,
       entry_price: parseFloat(form.entry_price) || null,
@@ -76,10 +78,12 @@ export default function TradeLog() {
 
     let tradeId = editingId;
     if (editingId) {
-      await supabase.from('trades').update(payload).eq('id', editingId);
+      const { error } = await supabase.from('trades').update(payload).eq('id', editingId);
+      if (error) { setSaveError(error.message); return; }
     } else {
       const { data, error } = await supabase.from('trades').insert(payload).select().single();
-      if (!error) tradeId = data.id;
+      if (error) { setSaveError(error.message); return; }
+      tradeId = data.id;
     }
 
     if (files.length && tradeId) {
@@ -162,13 +166,8 @@ export default function TradeLog() {
           </div>
         </div>
 
-        <button type="button" className="btn-ghost small" style={{ marginTop: 12 }} onClick={() => setExpanded(!expanded)}>
-          {expanded ? 'Hide review section' : 'Add pre/post-trade review'}
-        </button>
-
-        {expanded && (
-          <div className="review-section">
-            <label>Pre-trade analysis</label>
+        <div className="review-section">
+          <label>Pre-trade analysis</label>
             <textarea value={form.pre_trade_analysis} onChange={(e) => setForm({ ...form, pre_trade_analysis: e.target.value })} rows={2} placeholder="Setup, thesis, why taking this trade..." />
 
             <label>Execution checklist ({checklistDone}/{CHECKLIST_ITEMS.length})</label>
@@ -196,12 +195,12 @@ export default function TradeLog() {
 
             <label>Screenshots</label>
             <input type="file" accept="image/*" multiple onChange={(e) => setFiles(Array.from(e.target.files))} />
-          </div>
-        )}
+        </div>
 
         <label>Notes</label>
         <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
 
+        {saveError && <div className="error">Save failed: {saveError}</div>}
         <div className="row">
           <button className="btn-primary" type="submit">{editingId ? 'Update trade' : 'Add trade'}</button>
           {editingId && <button type="button" className="btn-ghost" onClick={() => { setForm(empty); setEditingId(null); setExpanded(false); }}>Cancel</button>}
@@ -220,13 +219,13 @@ export default function TradeLog() {
               {trades.map((t) => (
                 <React.Fragment key={t.id}>
                   <tr className="clickable" onClick={() => setOpenRow(openRow === t.id ? null : t.id)}>
-                    <td>{t.symbol}</td>
-                    <td className={t.side === 'long' ? 'long' : 'short'}>{t.side}</td>
+                    <td><span className="symbol-chip">{t.symbol}</span></td>
+                    <td><span className={t.side === 'long' ? 'badge badge-long' : 'badge badge-short'}>{t.side}</span></td>
                     <td>{t.entry_price}</td>
                     <td>{t.exit_price ?? '-'}</td>
                     <td>{t.size}</td>
-                    <td className={t.pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}>{t.pnl != null ? t.pnl.toFixed(2) : '-'}</td>
-                    <td>{'★'.repeat(t.rating || 0)}</td>
+                    <td>{t.pnl != null ? <span className={`pnl-pill ${t.pnl >= 0 ? 'pos' : 'neg'}`}>{t.pnl >= 0 ? '+' : ''}{t.pnl.toFixed(2)}</span> : '-'}</td>
+                    <td className="star-cell">{'★'.repeat(t.rating || 0)}</td>
                     <td>{t.entry_date}</td>
                     <td className="actions" onClick={(e) => e.stopPropagation()}>
                       <button className="btn-ghost small" onClick={() => startEdit(t)}>Edit</button>
