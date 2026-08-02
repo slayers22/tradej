@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import TradeLog from './pages/TradeLog';
 import Import from './pages/Import';
+import CalendarPage from './pages/Calendar';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -21,6 +22,7 @@ function Nav() {
       <div className="links">
         <NavLink to="/" end>Dashboard</NavLink>
         <NavLink to="/trades">Trade Log</NavLink>
+        <NavLink to="/calendar">Calendar</NavLink>
         <NavLink to="/import">Import</NavLink>
       </div>
       <button className="btn-ghost" onClick={signOut}>Sign out</button>
@@ -39,6 +41,7 @@ export default function App() {
             <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="/trades" element={<PrivateRoute><TradeLog /></PrivateRoute>} />
             <Route path="/import" element={<PrivateRoute><Import /></PrivateRoute>} />
+            <Route path="/calendar" element={<PrivateRoute><CalendarPage /></PrivateRoute>} />
           </Routes>
         </main>
       </BrowserRouter>
