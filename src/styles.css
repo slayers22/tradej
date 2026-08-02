@@ -41,6 +41,19 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple
 .pnl-pos, .long { color: var(--pos); }
 .pnl-neg, .short { color: var(--neg); }
 
+.badge {
+  display: inline-block; padding: 3px 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em;
+}
+.badge-long { background: var(--pos-soft); color: var(--pos); }
+.badge-short { background: var(--neg-soft); color: var(--neg); }
+.pnl-pill {
+  display: inline-block; padding: 3px 10px; border-radius: 999px; font-weight: 700; font-size: 13px;
+}
+.pnl-pill.pos { background: var(--pos-soft); color: var(--pos); }
+.pnl-pill.neg { background: var(--neg-soft); color: var(--neg); }
+.symbol-chip { font-weight: 700; background: var(--accent-soft); color: var(--accent); padding: 3px 8px; border-radius: 6px; font-size: 13px; }
+
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
 label { display: block; font-size: 13px; color: var(--muted); margin: 8px 0 4px; }
 input, select, textarea {
@@ -83,6 +96,7 @@ tr.detail-row p { margin: 4px 0; }
 .stars { font-size: 22px; }
 .star { color: #d7dae0; cursor: pointer; }
 .star.filled { color: #f5b400; }
+.star-cell { color: #f5b400; letter-spacing: 1px; }
 
 .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }

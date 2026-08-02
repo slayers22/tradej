@@ -220,13 +220,13 @@ export default function TradeLog() {
               {trades.map((t) => (
                 <React.Fragment key={t.id}>
                   <tr className="clickable" onClick={() => setOpenRow(openRow === t.id ? null : t.id)}>
-                    <td>{t.symbol}</td>
-                    <td className={t.side === 'long' ? 'long' : 'short'}>{t.side}</td>
+                    <td><span className="symbol-chip">{t.symbol}</span></td>
+                    <td><span className={t.side === 'long' ? 'badge badge-long' : 'badge badge-short'}>{t.side}</span></td>
                     <td>{t.entry_price}</td>
                     <td>{t.exit_price ?? '-'}</td>
                     <td>{t.size}</td>
-                    <td className={t.pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}>{t.pnl != null ? t.pnl.toFixed(2) : '-'}</td>
-                    <td>{'★'.repeat(t.rating || 0)}</td>
+                    <td>{t.pnl != null ? <span className={`pnl-pill ${t.pnl >= 0 ? 'pos' : 'neg'}`}>{t.pnl >= 0 ? '+' : ''}{t.pnl.toFixed(2)}</span> : '-'}</td>
+                    <td className="star-cell">{'★'.repeat(t.rating || 0)}</td>
                     <td>{t.entry_date}</td>
                     <td className="actions" onClick={(e) => e.stopPropagation()}>
                       <button className="btn-ghost small" onClick={() => startEdit(t)}>Edit</button>

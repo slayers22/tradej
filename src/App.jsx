@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import TradeLog from './pages/TradeLog';
 import Import from './pages/Import';
 import CalendarPage from './pages/Calendar';
+import Mt5Sync from './pages/Mt5Sync';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -24,6 +25,7 @@ function Nav() {
         <NavLink to="/trades">Trade Log</NavLink>
         <NavLink to="/calendar">Calendar</NavLink>
         <NavLink to="/import">Import</NavLink>
+        <NavLink to="/mt5">MT4/5 Sync</NavLink>
       </div>
       <button className="btn-ghost" onClick={signOut}>Sign out</button>
     </nav>
@@ -42,6 +44,7 @@ export default function App() {
             <Route path="/trades" element={<PrivateRoute><TradeLog /></PrivateRoute>} />
             <Route path="/import" element={<PrivateRoute><Import /></PrivateRoute>} />
             <Route path="/calendar" element={<PrivateRoute><CalendarPage /></PrivateRoute>} />
+            <Route path="/mt5" element={<PrivateRoute><Mt5Sync /></PrivateRoute>} />
           </Routes>
         </main>
       </BrowserRouter>
