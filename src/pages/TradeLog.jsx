@@ -13,8 +13,8 @@ const CHECKLIST_ITEMS = [
 const emptyChecklist = CHECKLIST_ITEMS.reduce((acc, c) => ({ ...acc, [c.key]: false }), {});
 
 const empty = {
-  symbol: '', side: 'long', entry_price: '', exit_price: '', size: '',
-  entry_date: '', exit_date: '', fees: '', notes: '',
+  symbol: '', trade_type: 'long', open_price: '', close_price: '', volume: '',
+  entry_date: '', exit_date: '', notes: '',
   pre_trade_analysis: '', post_trade_review: '', lessons_learned: '',
   rating: 0, checklist: emptyChecklist,
 };
@@ -57,34 +57,32 @@ export default function TradeLog() {
     setSubmitError('');
 
     // Validate required fields
-    const required = { symbol: form.symbol, side: form.side, entry_price: form.entry_price, size: form.size, entry_date: form.entry_date };
+    const required = { symbol: form.symbol, trade_type: form.trade_type, open_price: form.open_price, volume: form.volume, entry_date: form.entry_date };
     const missing = Object.entries(required).filter(([, v]) => !v || (typeof v === 'string' && v.trim() === ''));
     if (missing.length) {
       setSubmitError(`Missing required fields: ${missing.map(([k]) => k).join(', ')}`);
       return;
     }
 
-    const entryPrice = parseFloat(form.entry_price);
-    const size = parseFloat(form.size);
-    const fees = form.fees ? parseFloat(form.fees) : 0;
-    const exitPrice = form.exit_price ? parseFloat(form.exit_price) : null;
+    const openPrice = parseFloat(form.open_price);
+    const volume = parseFloat(form.volume);
+    const closePrice = form.close_price ? parseFloat(form.close_price) : null;
 
-    if (isNaN(entryPrice) || isNaN(size) || (exitPrice !== null && isNaN(exitPrice))) {
-      setSubmitError('Entry price, size, and exit price must be valid numbers');
+    if (isNaN(openPrice) || isNaN(volume) || (closePrice !== null && isNaN(closePrice))) {
+      setSubmitError('Open price, volume, and close price must be valid numbers');
       return;
     }
 
-    const pnl = exitPrice !== null
-      ? (form.side === 'long' ? (exitPrice - entryPrice) * size : (entryPrice - exitPrice) * size) - fees
+    const profit = closePrice !== null
+      ? (form.trade_type === 'long' ? (closePrice - openPrice) * volume : (openPrice - closePrice) * volume)
       : null;
 
     const payload = {
       symbol: form.symbol.trim().toUpperCase(),
-      side: form.side,
-      entry_price: entryPrice,
-      exit_price: exitPrice,
-      size,
-      fees,
+      trade_type: form.trade_type,
+      open_price: openPrice,
+      close_price: closePrice,
+      volume,
       entry_date: form.entry_date,
       exit_date: form.exit_date || null,
       notes: form.notes || '',
@@ -94,7 +92,8 @@ export default function TradeLog() {
       rating: form.rating || 0,
       checklist: form.checklist,
       user_id: user.id,
-      pnl,
+      profit,
+      source: 'manual',
     };
 
     let tradeId = editingId;
@@ -126,8 +125,8 @@ export default function TradeLog() {
 
   function startEdit(t) {
     setForm({
-      symbol: t.symbol, side: t.side, entry_price: t.entry_price, exit_price: t.exit_price ?? '',
-      size: t.size, entry_date: t.entry_date, exit_date: t.exit_date ?? '', fees: t.fees ?? '',
+      symbol: t.symbol, trade_type: t.trade_type, open_price: t.open_price, close_price: t.close_price ?? '',
+      volume: t.volume, entry_date: t.entry_date, exit_date: t.exit_date ?? '',
       notes: t.notes ?? '', pre_trade_analysis: t.pre_trade_analysis ?? '', post_trade_review: t.post_trade_review ?? '',
       lessons_learned: t.lessons_learned ?? '', rating: t.rating ?? 0, checklist: t.checklist ?? emptyChecklist,
     });
@@ -161,26 +160,22 @@ export default function TradeLog() {
           </div>
           <div>
             <label>Side</label>
-            <select value={form.side} onChange={(e) => setForm({ ...form, side: e.target.value })}>
+            <select value={form.trade_type} onChange={(e) => setForm({ ...form, trade_type: e.target.value })}>
               <option value="long">Long</option>
               <option value="short">Short</option>
             </select>
           </div>
           <div>
             <label>Entry price</label>
-            <input type="number" step="any" value={form.entry_price} onChange={(e) => setForm({ ...form, entry_price: e.target.value })} required />
+            <input type="number" step="any" value={form.open_price} onChange={(e) => setForm({ ...form, open_price: e.target.value })} required />
           </div>
           <div>
             <label>Exit price</label>
-            <input type="number" step="any" value={form.exit_price} onChange={(e) => setForm({ ...form, exit_price: e.target.value })} />
+            <input type="number" step="any" value={form.close_price} onChange={(e) => setForm({ ...form, close_price: e.target.value })} />
           </div>
           <div>
-            <label>Size</label>
-            <input type="number" step="any" value={form.size} onChange={(e) => setForm({ ...form, size: e.target.value })} required />
-          </div>
-          <div>
-            <label>Fees</label>
-            <input type="number" step="any" value={form.fees} onChange={(e) => setForm({ ...form, fees: e.target.value })} />
+            <label>Volume</label>
+            <input type="number" step="any" value={form.volume} onChange={(e) => setForm({ ...form, volume: e.target.value })} required />
           </div>
           <div>
             <label>Entry date</label>
@@ -243,7 +238,7 @@ export default function TradeLog() {
           <table>
             <thead>
               <tr>
-                <th>Symbol</th><th>Side</th><th>Entry</th><th>Exit</th><th>Size</th><th>PnL</th><th>Rating</th><th>Date</th><th></th>
+                <th>Symbol</th><th>Side</th><th>Entry</th><th>Exit</th><th>Volume</th><th>PnL</th><th>Rating</th><th>Date</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -251,11 +246,11 @@ export default function TradeLog() {
                 <React.Fragment key={t.id}>
                   <tr className="clickable" onClick={() => setOpenRow(openRow === t.id ? null : t.id)}>
                     <td><span className="symbol-chip">{t.symbol}</span></td>
-                    <td><span className={t.side === 'long' ? 'badge badge-long' : 'badge badge-short'}>{t.side}</span></td>
-                    <td>{t.entry_price}</td>
-                    <td>{t.exit_price ?? '-'}</td>
-                    <td>{t.size}</td>
-                    <td>{t.pnl != null ? <span className={`pnl-pill ${t.pnl >= 0 ? 'pos' : 'neg'}`}>{t.pnl >= 0 ? '+' : ''}{t.pnl.toFixed(2)}</span> : '-'}</td>
+                    <td><span className={t.trade_type === 'long' ? 'badge badge-long' : 'badge badge-short'}>{t.trade_type}</span></td>
+                    <td>{t.open_price}</td>
+                    <td>{t.close_price ?? '-'}</td>
+                    <td>{t.volume}</td>
+                    <td>{t.profit != null ? <span className={`pnl-pill ${t.profit >= 0 ? 'pos' : 'neg'}`}>{t.profit >= 0 ? '+' : ''}{Number(t.profit).toFixed(2)}</span> : '-'}</td>
                     <td className="star-cell">{'★'.repeat(t.rating || 0)}</td>
                     <td>{t.entry_date}</td>
                     <td className="actions" onClick={(e) => e.stopPropagation()}>

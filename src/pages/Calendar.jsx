@@ -20,8 +20,8 @@ export default function CalendarPage() {
   const dailyPnl = useMemo(() => {
     const map = {};
     trades.forEach((t) => {
-      if (t.pnl == null || !t.entry_date) return;
-      map[t.entry_date] = (map[t.entry_date] || 0) + t.pnl;
+      if (t.profit == null || !t.entry_date) return;
+      map[t.entry_date] = (map[t.entry_date] || 0) + Number(t.profit);
     });
     return map;
   }, [trades]);

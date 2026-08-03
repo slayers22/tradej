@@ -19,21 +19,21 @@ export default function Dashboard() {
   }, []);
 
   const stats = useMemo(() => {
-    const closed = trades.filter((t) => t.pnl != null);
-    const wins = closed.filter((t) => t.pnl > 0);
-    const losses = closed.filter((t) => t.pnl <= 0);
-    const totalPnl = closed.reduce((s, t) => s + t.pnl, 0);
+    const closed = trades.filter((t) => t.profit != null);
+    const wins = closed.filter((t) => t.profit > 0);
+    const losses = closed.filter((t) => t.profit <= 0);
+    const totalPnl = closed.reduce((s, t) => s + Number(t.profit), 0);
     const winRate = closed.length ? (wins.length / closed.length) * 100 : 0;
-    const avgWin = wins.length ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
-    const avgLoss = losses.length ? losses.reduce((s, t) => s + t.pnl, 0) / losses.length : 0;
+    const avgWin = wins.length ? wins.reduce((s, t) => s + Number(t.profit), 0) / wins.length : 0;
+    const avgLoss = losses.length ? losses.reduce((s, t) => s + Number(t.profit), 0) / losses.length : 0;
     let equity = 0;
     const equityCurve = closed.map((t) => {
-      equity += t.pnl;
+      equity += Number(t.profit);
       return { date: t.entry_date, equity: Number(equity.toFixed(2)) };
     });
     const bySymbol = {};
     closed.forEach((t) => {
-      bySymbol[t.symbol] = (bySymbol[t.symbol] || 0) + t.pnl;
+      bySymbol[t.symbol] = (bySymbol[t.symbol] || 0) + Number(t.profit);
     });
     const symbolData = Object.entries(bySymbol).map(([symbol, pnl]) => ({ symbol, pnl: Number(pnl.toFixed(2)) }));
     return {

@@ -3,7 +3,7 @@ import Papa from 'papaparse';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../AuthContext';
 
-// Expected CSV headers: symbol,side,entry_price,exit_price,size,fees,entry_date,exit_date,notes
+// Expected CSV headers: symbol,trade_type,open_price,close_price,volume,entry_date,exit_date,notes
 export default function Import() {
   const { user } = useAuth();
   const [preview, setPreview] = useState([]);
@@ -23,32 +23,36 @@ export default function Import() {
     });
   }
 
-  function calcPnl(t) {
-    const entry = parseFloat(t.entry_price);
-    const exit = parseFloat(t.exit_price);
-    const size = parseFloat(t.size);
-    const fees = parseFloat(t.fees) || 0;
-    if (isNaN(entry) || isNaN(exit) || isNaN(size)) return null;
-    const side = (t.side || 'long').toLowerCase();
-    const raw = side === 'long' ? (exit - entry) * size : (entry - exit) * size;
-    return raw - fees;
+  function calcProfit(t) {
+    const open = parseFloat(t.open_price);
+    const close = parseFloat(t.close_price);
+    const volume = parseFloat(t.volume);
+    if (isNaN(open) || isNaN(close) || isNaN(volume)) return null;
+    const tradeType = (t.trade_type || 'long').toLowerCase();
+    const raw = tradeType === 'long' ? (close - open) * volume : (open - close) * volume;
+    return raw;
   }
 
   async function handleImport() {
     setStatus('Importing...');
     const rows = preview.map((r) => ({
       symbol: (r.symbol || '').toUpperCase(),
-      side: (r.side || 'long').toLowerCase(),
-      entry_price: parseFloat(r.entry_price) || null,
-      exit_price: r.exit_price ? parseFloat(r.exit_price) : null,
-      size: parseFloat(r.size) || null,
-      fees: r.fees ? parseFloat(r.fees) : 0,
+      trade_type: (r.trade_type || r.side || 'long').toLowerCase(),
+      open_price: parseFloat(r.open_price || r.entry_price) || null,
+      close_price: r.close_price || r.exit_price ? parseFloat(r.close_price || r.exit_price) : null,
+      volume: parseFloat(r.volume || r.size) || null,
       entry_date: r.entry_date || null,
       exit_date: r.exit_date || null,
       notes: r.notes || '',
       user_id: user.id,
-      pnl: calcPnl(r),
-    })).filter((r) => r.symbol && r.entry_price && r.size && r.entry_date);
+      profit: calcProfit({
+        open_price: r.open_price || r.entry_price,
+        close_price: r.close_price || r.exit_price,
+        volume: r.volume || r.size,
+        trade_type: r.trade_type || r.side,
+      }),
+      source: 'csv',
+    })).filter((r) => r.symbol && r.open_price && r.volume && r.entry_date);
 
     const { error } = await supabase.from('trades').insert(rows);
     if (error) {
@@ -64,8 +68,10 @@ export default function Import() {
       <h1>Import trades</h1>
       <div className="card">
         <p className="muted">
-          CSV columns expected: <code>symbol, side, entry_price, exit_price, size, fees, entry_date, exit_date, notes</code>.
-          Dates as YYYY-MM-DD. side is "long" or "short".
+          CSV columns expected: <code>symbol, trade_type, open_price, close_price, volume, entry_date, exit_date, notes</code>.
+          Dates as YYYY-MM-DD. trade_type is "long" or "short".
+          <br />
+          <em>Legacy format also accepted: side, entry_price, exit_price, size.</em>
         </p>
         <input type="file" accept=".csv" onChange={handleFile} />
         {status && <div className="info">{status}</div>}
