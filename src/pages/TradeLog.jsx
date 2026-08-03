@@ -28,6 +28,7 @@ export default function TradeLog() {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openRow, setOpenRow] = useState(null);
+  const [submitError, setSubmitError] = useState('');
 
   async function load() {
     setLoading(true);
@@ -41,16 +42,6 @@ export default function TradeLog() {
 
   useEffect(() => { load(); }, []);
 
-  function calcPnl(t) {
-    const entry = parseFloat(t.entry_price);
-    const exit = parseFloat(t.exit_price);
-    const size = parseFloat(t.size);
-    const fees = parseFloat(t.fees) || 0;
-    if (isNaN(entry) || isNaN(exit) || isNaN(size)) return null;
-    const raw = t.side === 'long' ? (exit - entry) * size : (entry - exit) * size;
-    return raw - fees;
-  }
-
   async function uploadScreenshots(tradeId) {
     const urls = [];
     for (const file of files) {
@@ -63,36 +54,74 @@ export default function TradeLog() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setSubmitError('');
+
+    // Validate required fields
+    const required = { symbol: form.symbol, side: form.side, entry_price: form.entry_price, size: form.size, entry_date: form.entry_date };
+    const missing = Object.entries(required).filter(([, v]) => !v || (typeof v === 'string' && v.trim() === ''));
+    if (missing.length) {
+      setSubmitError(`Missing required fields: ${missing.map(([k]) => k).join(', ')}`);
+      return;
+    }
+
+    const entryPrice = parseFloat(form.entry_price);
+    const size = parseFloat(form.size);
+    const fees = form.fees ? parseFloat(form.fees) : 0;
+    const exitPrice = form.exit_price ? parseFloat(form.exit_price) : null;
+
+    if (isNaN(entryPrice) || isNaN(size) || (exitPrice !== null && isNaN(exitPrice))) {
+      setSubmitError('Entry price, size, and exit price must be valid numbers');
+      return;
+    }
+
+    const pnl = exitPrice !== null
+      ? (form.side === 'long' ? (exitPrice - entryPrice) * size : (entryPrice - exitPrice) * size) - fees
+      : null;
+
     const payload = {
-      ...form,
-      entry_price: parseFloat(form.entry_price) || null,
-      exit_price: form.exit_price ? parseFloat(form.exit_price) : null,
-      size: parseFloat(form.size) || null,
-      fees: form.fees ? parseFloat(form.fees) : 0,
+      symbol: form.symbol.trim().toUpperCase(),
+      side: form.side,
+      entry_price: entryPrice,
+      exit_price: exitPrice,
+      size,
+      fees,
+      entry_date: form.entry_date,
+      exit_date: form.exit_date || null,
+      notes: form.notes || '',
+      pre_trade_analysis: form.pre_trade_analysis || '',
+      post_trade_review: form.post_trade_review || '',
+      lessons_learned: form.lessons_learned || '',
       rating: form.rating || 0,
+      checklist: form.checklist,
       user_id: user.id,
-      pnl: calcPnl(form),
+      pnl,
     };
 
     let tradeId = editingId;
-    if (editingId) {
-      await supabase.from('trades').update(payload).eq('id', editingId);
-    } else {
-      const { data, error } = await supabase.from('trades').insert(payload).select().single();
-      if (!error) tradeId = data.id;
-    }
+    try {
+      if (editingId) {
+        const { error } = await supabase.from('trades').update(payload).eq('id', editingId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('trades').insert(payload).select().single();
+        if (error) throw error;
+        tradeId = data.id;
+      }
 
-    if (files.length && tradeId) {
-      const newUrls = await uploadScreenshots(tradeId);
-      const existing = editingId ? (trades.find((t) => t.id === tradeId)?.screenshot_urls || []) : [];
-      await supabase.from('trades').update({ screenshot_urls: [...existing, ...newUrls] }).eq('id', tradeId);
-    }
+      if (files.length && tradeId) {
+        const newUrls = await uploadScreenshots(tradeId);
+        const existing = editingId ? (trades.find((t) => t.id === tradeId)?.screenshot_urls || []) : [];
+        await supabase.from('trades').update({ screenshot_urls: [...existing, ...newUrls] }).eq('id', tradeId);
+      }
 
-    setForm(empty);
-    setFiles([]);
-    setEditingId(null);
-    setExpanded(false);
-    load();
+      setForm(empty);
+      setFiles([]);
+      setEditingId(null);
+      setExpanded(false);
+      load();
+    } catch (err) {
+      setSubmitError(err.message || 'Failed to save trade');
+    }
   }
 
   function startEdit(t) {
@@ -124,6 +153,7 @@ export default function TradeLog() {
       <h1>Trade Log</h1>
 
       <form className="card trade-form" onSubmit={handleSubmit}>
+        {submitError && <div className="error" style={{marginBottom: 12}}>{submitError}</div>}
         <div className="grid">
           <div>
             <label>Symbol</label>
