@@ -1107,3 +1107,217 @@ tr.detail-row p { margin: 4px 0; }
 }
 .mini-cal-day.pos { background: var(--pos-soft); color: var(--pos); font-weight: 700; }
 .mini-cal-day.neg { background: var(--neg-soft); color: var(--neg); font-weight: 700; }
+
+/* === New Calendar Page Layout === */
+.calendar-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.calendar-page-title h1 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+}
+.calendar-page-title p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+}
+.calendar-nav button {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 600;
+}
+.calendar-nav button:hover { background: #e2e8f0; }
+.calendar-nav span {
+  font-weight: 700;
+  font-size: 14px;
+  min-width: 100px;
+  text-align: center;
+}
+
+.calendar-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .calendar-layout { grid-template-columns: 1fr; }
+}
+
+.calendar-grid-wrapper {
+  background: var(--card);
+}
+
+.calendar-grid-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr) 1fr;
+  gap: 12px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.calendar-grid-header > div {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.calendar-grid-body {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr) 1fr;
+  gap: 12px;
+  grid-auto-rows: minmax(80px, auto);
+}
+.cal-day-cell {
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.cal-day-cell:hover {
+  border-color: #cbd5e1;
+}
+.cal-day-cell.empty {
+  background: transparent;
+  border-color: transparent;
+  cursor: default;
+}
+.cal-day-cell.empty:hover { border-color: transparent; }
+.cal-day-cell.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+}
+.cal-day-cell.profit {
+  background: var(--pos-soft);
+  border-color: #bbf7d0;
+}
+.cal-day-cell.loss {
+  background: var(--neg-soft);
+  border-color: #fecaca;
+}
+
+.cal-day-num {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: auto;
+}
+.cal-day-pnl {
+  font-weight: 800;
+  font-size: 14px;
+  margin-top: 8px;
+  text-align: center;
+}
+.cal-day-cell.profit .cal-day-pnl { color: var(--pos); }
+.cal-day-cell.loss .cal-day-pnl { color: var(--neg); }
+
+.cal-weekly-cell {
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.cal-weekly-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+.cal-weekly-pnl {
+  font-weight: 800;
+  font-size: 15px;
+}
+.cal-weekly-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.calendar-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 24px;
+  font-size: 13px;
+  color: var(--text);
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.calendar-sidebar {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 400px;
+}
+.cal-sidebar-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cal-sidebar-body {
+  padding: 20px;
+  flex: 1;
+}
+.cal-sidebar-empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 60px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.cal-sidebar-empty-icon {
+  font-size: 32px;
+  opacity: 0.5;
+}
