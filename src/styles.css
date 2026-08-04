@@ -15,7 +15,8 @@
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+html, body { margin: 0; padding: 0; overflow-x: hidden; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
 /* === App Shell === */
 .app-shell {
@@ -1044,10 +1045,19 @@ tr.detail-row p { margin: 4px 0; }
 }
 
 @media (max-width: 860px) {
+  .journal-page {
+    margin: -16px;
+  }
   .journal-sidebar {
     position: absolute;
     z-index: 20;
     height: 100%;
+  }
+  .journal-content {
+    padding: 16px;
+  }
+  .journal-editor {
+    padding: 16px;
   }
 }
 
@@ -1418,10 +1428,13 @@ tr.detail-row p { margin: 4px 0; }
 
 .calendar-grid-wrapper {
   background: var(--card);
+  overflow-x: auto;
+  border-radius: 12px;
 }
 
 .calendar-grid-header {
   display: grid;
+  min-width: 760px;
   grid-template-columns: repeat(7, 1fr) 1fr;
   gap: 12px;
   text-align: center;
@@ -1440,6 +1453,7 @@ tr.detail-row p { margin: 4px 0; }
   grid-template-columns: repeat(7, 1fr) 1fr;
   gap: 12px;
   grid-auto-rows: minmax(80px, auto);
+  min-width: 760px;
 }
 .cal-day-cell {
   background: #f8fafc;
