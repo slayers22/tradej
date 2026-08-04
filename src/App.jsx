@@ -47,7 +47,8 @@ function AppShell({ children }) {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const clock = useClock();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [desktopSidebarClosed, setDesktopSidebarClosed] = useState(false);
 
   if (!user) return <>{children}</>;
 
@@ -62,10 +63,10 @@ function AppShell({ children }) {
   return (
     <div className="app-shell">
       {/* Mobile overlay */}
-      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+      {mobileSidebarOpen && <div className="sidebar-overlay" onClick={() => setMobileSidebarOpen(false)} />}
 
       {/* Sidebar */}
-      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+      <aside className={`sidebar ${mobileSidebarOpen ? 'mobile-open' : ''} ${desktopSidebarClosed ? 'desktop-closed' : ''}`}>
         {/* Brand */}
         <div className="sidebar-brand">
           <div className="brand-icon">TJ</div>
@@ -84,19 +85,19 @@ function AppShell({ children }) {
         {/* Nav: MENU */}
         <div className="sidebar-section">
           <span className="sidebar-section-label">MENU</span>
-          <NavLink to="/dashboard" className="sidebar-link" onClick={() => setSidebarOpen(false)}>
+          <NavLink to="/dashboard" className="sidebar-link" onClick={() => setMobileSidebarOpen(false)}>
             <span className="sidebar-icon">📊</span>
             <span>Dashboard</span>
           </NavLink>
-          <NavLink to="/journal" className="sidebar-link" onClick={() => setSidebarOpen(false)}>
+          <NavLink to="/journal" className="sidebar-link" onClick={() => setMobileSidebarOpen(false)}>
             <span className="sidebar-icon">📓</span>
             <span>Journal</span>
           </NavLink>
-          <NavLink to="/trades" className="sidebar-link" onClick={() => setSidebarOpen(false)}>
+          <NavLink to="/trades" className="sidebar-link" onClick={() => setMobileSidebarOpen(false)}>
             <span className="sidebar-icon">📋</span>
             <span>Trades</span>
           </NavLink>
-          <NavLink to="/calendar" className="sidebar-link" onClick={() => setSidebarOpen(false)}>
+          <NavLink to="/calendar" className="sidebar-link" onClick={() => setMobileSidebarOpen(false)}>
             <span className="sidebar-icon">📅</span>
             <span>Calendar</span>
           </NavLink>
@@ -105,11 +106,11 @@ function AppShell({ children }) {
         {/* Nav: TOOLS */}
         <div className="sidebar-section">
           <span className="sidebar-section-label">TOOLS</span>
-          <NavLink to="/import" className="sidebar-link" onClick={() => setSidebarOpen(false)}>
+          <NavLink to="/import" className="sidebar-link" onClick={() => setMobileSidebarOpen(false)}>
             <span className="sidebar-icon">📥</span>
             <span>Import CSV</span>
           </NavLink>
-          <NavLink to="/mt5" className="sidebar-link" onClick={() => setSidebarOpen(false)}>
+          <NavLink to="/mt5" className="sidebar-link" onClick={() => setMobileSidebarOpen(false)}>
             <span className="sidebar-icon">🔗</span>
             <span>MT4/MT5 Sync</span>
           </NavLink>
@@ -132,10 +133,18 @@ function AppShell({ children }) {
       </aside>
 
       {/* Main area */}
-      <div className="main-area">
+      <div className={`main-area ${desktopSidebarClosed ? 'desktop-closed' : ''}`}>
         {/* Top bar */}
         <header className="topbar">
-          <button className="topbar-menu-btn" onClick={() => setSidebarOpen(true)}>☰</button>
+          <button 
+            className="topbar-menu-btn" 
+            onClick={() => {
+              if (window.innerWidth <= 860) setMobileSidebarOpen(true);
+              else setDesktopSidebarClosed(!desktopSidebarClosed);
+            }}
+          >
+            ☰
+          </button>
           <div className="topbar-title">
             <h2>{pageTitle}</h2>
             <span className="topbar-date">{dateStr}</span>
