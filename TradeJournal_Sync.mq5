@@ -6,7 +6,7 @@
 #property link      ""
 #property version   "1.00"
 
-input string WebhookURL = "https://omkjjfxtcdmbdjjeusiu.supabase.co/functions/v1/mt5-sync"; // Webhook URL
+input string WebhookURL = "https://YOUR_PROJECT.supabase.co/functions/v1/mt5-sync"; // Webhook URL
 input string WebhookToken = "";   // Paste your Sync Token here (from TradeJournal website)
 
 datetime lastSyncTime = 0;
