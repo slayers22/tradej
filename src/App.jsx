@@ -8,6 +8,7 @@ import Import from './pages/Import';
 import CalendarPage from './pages/Calendar';
 import Mt5Sync from './pages/Mt5Sync';
 import Landing from './pages/Landing';
+import Journal from './pages/Journal';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -25,6 +26,7 @@ function PublicRoute({ children }) {
 const PAGE_TITLES = {
   '/dashboard': 'Dashboard',
   '/trades': 'Trades',
+  '/journal': 'Journal',
   '/calendar': 'Calendar',
   '/import': 'Import',
   '/mt5': 'MT5 Sync',
@@ -85,6 +87,10 @@ function AppShell({ children }) {
           <NavLink to="/dashboard" className="sidebar-link" onClick={() => setSidebarOpen(false)}>
             <span className="sidebar-icon">📊</span>
             <span>Dashboard</span>
+          </NavLink>
+          <NavLink to="/journal" className="sidebar-link" onClick={() => setSidebarOpen(false)}>
+            <span className="sidebar-icon">📓</span>
+            <span>Journal</span>
           </NavLink>
           <NavLink to="/trades" className="sidebar-link" onClick={() => setSidebarOpen(false)}>
             <span className="sidebar-icon">📋</span>
@@ -161,6 +167,7 @@ export default function App() {
             <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/journal" element={<PrivateRoute><Journal /></PrivateRoute>} />
             <Route path="/trades" element={<PrivateRoute><TradeLog /></PrivateRoute>} />
             <Route path="/import" element={<PrivateRoute><Import /></PrivateRoute>} />
             <Route path="/calendar" element={<PrivateRoute><CalendarPage /></PrivateRoute>} />

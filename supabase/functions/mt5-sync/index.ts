@@ -63,12 +63,23 @@ serve(async (req) => {
       };
     });
 
-    // Upsert trades
-    const { error: upsertError } = await supabase
+    // Filter out trades that already exist
+    const tickets = trades.map((t: any) => t.mt5_ticket);
+    const { data: existing, error: fetchError } = await supabase
       .from('trades')
-      .upsert(trades, { onConflict: 'user_id,mt5_ticket' });
+      .select('mt5_ticket')
+      .eq('user_id', conn.user_id)
+      .in('mt5_ticket', tickets);
       
-    if (upsertError) throw new Error(upsertError.message);
+    if (fetchError) throw new Error('Failed to check existing trades: ' + fetchError.message);
+    
+    const existingTickets = new Set(existing?.map((t: any) => t.mt5_ticket) || []);
+    const newTrades = trades.filter((t: any) => !existingTickets.has(t.mt5_ticket));
+
+    if (newTrades.length > 0) {
+      const { error: insertError } = await supabase.from('trades').insert(newTrades);
+      if (insertError) throw new Error('Failed to insert trades: ' + insertError.message);
+    }
 
     // Update connection status
     await supabase.from('mt5_connections').update({

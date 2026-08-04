@@ -3,16 +3,6 @@ import { supabase } from '../supabaseClient';
 import { useAuth } from '../AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-const CHECKLIST_ITEMS = [
-  { key: 'higher_timeframe', label: 'Checked higher timeframe' },
-  { key: 'risk_within_limits', label: 'Risk within limits' },
-  { key: 'fits_trading_plan', label: 'Fits my trading plan' },
-  { key: 'key_levels_identified', label: 'Key levels identified' },
-  { key: 'economic_calendar_checked', label: 'Economic calendar checked' },
-];
-
-const emptyChecklist = CHECKLIST_ITEMS.reduce((acc, c) => ({ ...acc, [c.key]: false }), {});
-
 // Standard contract sizes per lot
 const CONTRACT_SIZES = {
   XAUUSD: 100, XAGUSD: 5000, XAUEUR: 100, XAUGBP: 100,
@@ -41,8 +31,6 @@ function getContractSize(symbol) {
 const empty = {
   symbol: '', trade_type: 'long', open_price: '', close_price: '', volume: '',
   entry_date: '', exit_date: '', notes: '',
-  pre_trade_analysis: '', post_trade_review: '', lessons_learned: '',
-  rating: 0, checklist: emptyChecklist,
 };
 
 export default function TradeLog() {
@@ -52,10 +40,7 @@ export default function TradeLog() {
   const [form, setForm] = useState(empty);
   const [editingId, setEditingId] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [showChecklist, setShowChecklist] = useState(false);
-  const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [openRow, setOpenRow] = useState(null);
   const [submitError, setSubmitError] = useState('');
 
   async function load() {
@@ -69,16 +54,6 @@ export default function TradeLog() {
   }
 
   useEffect(() => { load(); }, []);
-
-  async function uploadScreenshots(tradeId) {
-    const urls = [];
-    for (const file of files) {
-      const path = `${user.id}/${tradeId}/${Date.now()}_${file.name}`;
-      const { error } = await supabase.storage.from('trade-screenshots').upload(path, file);
-      if (!error) urls.push(path);
-    }
-    return urls;
-  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -116,31 +91,18 @@ export default function TradeLog() {
       entry_date: form.entry_date,
       exit_date: form.exit_date || null,
       notes: form.notes || '',
-      pre_trade_analysis: form.pre_trade_analysis || '',
-      post_trade_review: form.post_trade_review || '',
-      lessons_learned: form.lessons_learned || '',
-      rating: form.rating || 0,
-      checklist: form.checklist,
       user_id: user.id,
       profit,
       source: 'manual',
     };
 
-    let tradeId = editingId;
     try {
       if (editingId) {
         const { error } = await supabase.from('trades').update(payload).eq('id', editingId);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from('trades').insert(payload).select().single();
+        const { error } = await supabase.from('trades').insert(payload);
         if (error) throw error;
-        tradeId = data.id;
-      }
-
-      if (files.length && tradeId) {
-        const newUrls = await uploadScreenshots(tradeId);
-        const existing = editingId ? (trades.find((t) => t.id === tradeId)?.screenshot_urls || []) : [];
-        await supabase.from('trades').update({ screenshot_urls: [...existing, ...newUrls] }).eq('id', tradeId);
       }
 
       closeModal();
@@ -153,8 +115,6 @@ export default function TradeLog() {
   function openAddModal() {
     setForm(empty);
     setEditingId(null);
-    setShowChecklist(false);
-    setFiles([]);
     setSubmitError('');
     setShowModal(true);
   }
@@ -163,12 +123,9 @@ export default function TradeLog() {
     setForm({
       symbol: t.symbol, trade_type: t.trade_type, open_price: t.open_price, close_price: t.close_price ?? '',
       volume: t.volume, entry_date: t.entry_date, exit_date: t.exit_date ?? '',
-      notes: t.notes ?? '', pre_trade_analysis: t.pre_trade_analysis ?? '', post_trade_review: t.post_trade_review ?? '',
-      lessons_learned: t.lessons_learned ?? '', rating: t.rating ?? 0, checklist: t.checklist ?? emptyChecklist,
+      notes: t.notes ?? '',
     });
     setEditingId(t.id);
-    setShowChecklist(false);
-    setFiles([]);
     setSubmitError('');
     setShowModal(true);
   }
@@ -177,9 +134,7 @@ export default function TradeLog() {
     setShowModal(false);
     setForm(empty);
     setEditingId(null);
-    setFiles([]);
     setSubmitError('');
-    setShowChecklist(false);
   }
 
   async function remove(id) {
@@ -193,12 +148,6 @@ export default function TradeLog() {
     await supabase.from('trades').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     load();
   }
-
-  function toggleChecklist(key) {
-    setForm({ ...form, checklist: { ...form.checklist, [key]: !form.checklist[key] } });
-  }
-
-  const checklistDone = Object.values(form.checklist).filter(Boolean).length;
 
   return (
     <div className="stack">
@@ -218,7 +167,7 @@ export default function TradeLog() {
       <div className="card">
         <div className="trade-history-header">
           <div>
-            <span className="trade-history-title">Trade History</span>
+            <span className="trade-history-title">Execution Log</span>
             <span className="trade-count">{trades.length} trades</span>
           </div>
         </div>
@@ -235,49 +184,30 @@ export default function TradeLog() {
                   <th>EXIT</th>
                   <th>SIZE</th>
                   <th>P&L</th>
-                  <th>RATING</th>
                   <th>SOURCE</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {trades.map((t) => (
-                  <React.Fragment key={t.id}>
-                    <tr className="clickable" onClick={() => setOpenRow(openRow === t.id ? null : t.id)}>
-                      <td className="muted">{t.entry_date}{t.exit_date ? ` → ${t.exit_date}` : ''}</td>
-                      <td><span className="symbol-chip">{t.symbol}</span></td>
-                      <td><span className={t.trade_type === 'long' ? 'badge badge-long' : 'badge badge-short'}>{t.trade_type}</span></td>
-                      <td>{t.open_price}</td>
-                      <td>{t.close_price ?? '—'}</td>
-                      <td>{t.volume}</td>
-                      <td>{t.profit != null ? <span className={`pnl-pill ${Number(t.profit) >= 0 ? 'pos' : 'neg'}`}>{Number(t.profit) >= 0 ? '+' : ''}{Number(t.profit).toFixed(2)}</span> : '—'}</td>
-                      <td className="star-cell">{'★'.repeat(t.rating || 0)}</td>
-                      <td><span className="source-badge">{t.source || 'manual'}</span></td>
-                      <td className="actions" onClick={(e) => e.stopPropagation()}>
-                        <button className="btn-ghost small" onClick={() => openEditModal(t)}>Edit</button>
-                        <button className="btn-ghost small danger" onClick={() => remove(t.id)}>Delete</button>
-                      </td>
-                    </tr>
-                    {openRow === t.id && (
-                      <tr className="detail-row">
-                        <td colSpan={10}>
-                          {t.pre_trade_analysis && <p><strong>Pre-trade:</strong> {t.pre_trade_analysis}</p>}
-                          {t.post_trade_review && <p><strong>Post-trade:</strong> {t.post_trade_review}</p>}
-                          {t.lessons_learned && <p><strong>Lessons:</strong> {t.lessons_learned}</p>}
-                          {t.notes && <p><strong>Notes:</strong> {t.notes}</p>}
-                          {t.checklist && (
-                            <p className="muted">
-                              Checklist: {CHECKLIST_ITEMS.filter((c) => t.checklist[c.key]).map((c) => c.label).join(', ') || 'none checked'}
-                            </p>
-                          )}
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
+                  <tr key={t.id}>
+                    <td className="muted">{t.entry_date}{t.exit_date ? ` → ${t.exit_date}` : ''}</td>
+                    <td><span className="symbol-chip">{t.symbol}</span></td>
+                    <td><span className={t.trade_type === 'long' ? 'badge badge-long' : 'badge badge-short'}>{t.trade_type}</span></td>
+                    <td>{t.open_price}</td>
+                    <td>{t.close_price ?? '—'}</td>
+                    <td>{t.volume}</td>
+                    <td>{t.profit != null ? <span className={`pnl-pill ${Number(t.profit) >= 0 ? 'pos' : 'neg'}`}>{Number(t.profit) >= 0 ? '+' : ''}{Number(t.profit).toFixed(2)}</span> : '—'}</td>
+                    <td><span className="source-badge">{t.source || 'manual'}</span></td>
+                    <td className="actions">
+                      <button className="btn-ghost small" onClick={() => openEditModal(t)}>Edit</button>
+                      <button className="btn-ghost small danger" onClick={() => remove(t.id)}>Delete</button>
+                    </td>
+                  </tr>
                 ))}
                 {trades.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="empty-state">
+                    <td colSpan={9} className="empty-state">
                       <div className="empty-icon">📋</div>
                       <p>No trades yet</p>
                       <button className="btn-primary" onClick={openAddModal}>+ Add your first trade</button>
@@ -357,51 +287,12 @@ export default function TradeLog() {
                 </div>
               </div>
 
-              {/* Pre-Trade Checklist Collapsible */}
-              <div className="checklist-toggle" onClick={() => setShowChecklist(!showChecklist)}>
-                <span className="chevron">{showChecklist ? '▾' : '›'}</span>
-                <span>Pre-Trade Checklist (Optional)</span>
-              </div>
-
-              {showChecklist && (
-                <div className="checklist-section">
-                  <div className="checklist">
-                    {CHECKLIST_ITEMS.map((c) => (
-                      <label key={c.key} className="checklist-item">
-                        <input type="checkbox" checked={form.checklist[c.key]} onChange={() => toggleChecklist(c.key)} />
-                        {c.label}
-                      </label>
-                    ))}
-                  </div>
-                  <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>{checklistDone}/{CHECKLIST_ITEMS.length} completed</span>
-
-                  <label className="modal-label" style={{ marginTop: 12 }}>Pre-trade analysis</label>
-                  <textarea value={form.pre_trade_analysis} onChange={(e) => setForm({ ...form, pre_trade_analysis: e.target.value })} rows={2} placeholder="Setup, thesis, why taking this trade..." />
-
-                  <label className="modal-label" style={{ marginTop: 8 }}>Post-trade review</label>
-                  <textarea value={form.post_trade_review} onChange={(e) => setForm({ ...form, post_trade_review: e.target.value })} rows={2} placeholder="What happened, did the plan play out..." />
-
-                  <label className="modal-label" style={{ marginTop: 8 }}>Lessons learned</label>
-                  <textarea value={form.lessons_learned} onChange={(e) => setForm({ ...form, lessons_learned: e.target.value })} rows={2} />
-
-                  <label className="modal-label" style={{ marginTop: 8 }}>Rating</label>
-                  <div className="stars">
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <span key={n} className={n <= form.rating ? 'star filled' : 'star'} onClick={() => setForm({ ...form, rating: n })}>★</span>
-                    ))}
-                  </div>
-
-                  <label className="modal-label" style={{ marginTop: 8 }}>Screenshots</label>
-                  <input type="file" accept="image/*" multiple onChange={(e) => setFiles(Array.from(e.target.files))} />
-                </div>
-              )}
-
               {/* Notes */}
               <label className="modal-label" style={{ marginTop: 16 }}>NOTES</label>
               <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} placeholder="Trade rationale, entry/exit notes..." />
 
               {/* Actions */}
-              <div className="modal-actions">
+              <div className="modal-actions" style={{ marginTop: 24 }}>
                 <button type="button" className="btn-ghost" onClick={closeModal}>Cancel</button>
                 <button type="submit" className="btn-primary">{editingId ? 'Update Trade' : 'Save Trade'}</button>
               </div>
