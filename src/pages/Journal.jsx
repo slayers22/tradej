@@ -1,6 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  PenLine, 
+  CheckCircle2, 
+  BrainCircuit, 
+  Lightbulb, 
+  Scale, 
+  ChevronLeft, 
+  Menu,
+  Save
+} from 'lucide-react';
 
 const EMOTION_OPTIONS = ['FOMO', 'Greed', 'Fear', 'Patient', 'Confident', 'Anxious', 'Revenge'];
 
@@ -13,14 +24,12 @@ export default function Journal() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
-  // Form State
   const [preTrade, setPreTrade] = useState('');
   const [postTrade, setPostTrade] = useState('');
   const [lessons, setLessons] = useState('');
   const [risk, setRisk] = useState('');
   const [reward, setReward] = useState('');
   const [emotions, setEmotions] = useState([]);
-  const [screenshots, setScreenshots] = useState([]);
 
   async function load() {
     setLoading(true);
@@ -34,7 +43,6 @@ export default function Journal() {
 
   useEffect(() => { load(); }, []);
 
-  // Sync form state when selected trade changes
   useEffect(() => {
     if (selectedTrade) {
       setPreTrade(selectedTrade.pre_trade_analysis || '');
@@ -46,7 +54,6 @@ export default function Journal() {
       setReward(rr[1] || '');
       
       setEmotions(selectedTrade.emotions || []);
-      setScreenshots(selectedTrade.screenshot_urls || []);
     }
   }, [selectedTrade]);
 
@@ -69,7 +76,6 @@ export default function Journal() {
       .eq('id', selectedTrade.id);
       
     if (!error) {
-      // Update local state
       const updated = { ...selectedTrade, ...payload };
       setTrades(trades.map(t => t.id === updated.id ? updated : t));
       setSelectedTrade(updated);
@@ -102,11 +108,12 @@ export default function Journal() {
 
   return (
     <div className="journal-page">
-      {/* Sidebar */}
       <div className={`journal-sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="journal-sidebar-header">
-          <h3>Trade Journal</h3>
-          <button className="btn-ghost small" onClick={() => setSidebarOpen(false)}>«</button>
+        <div style={{ padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Trade Journal</h3>
+          <button className="btn btn-ghost" style={{ padding: '6px' }} onClick={() => setSidebarOpen(false)}>
+            <ChevronLeft size={18} />
+          </button>
         </div>
 
         <div className="journal-filters">
@@ -121,132 +128,150 @@ export default function Journal() {
           </button>
         </div>
 
-        <div className="journal-list">
+        <div className="journal-list" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {loading && <div className="center" style={{padding: 20}}>Loading...</div>}
           {!loading && filteredTrades.length === 0 && <div className="muted" style={{padding: 20, textAlign: 'center'}}>No trades found.</div>}
-          {filteredTrades.map(t => {
-            const won = t.profit !== null && Number(t.profit) >= 0;
-            const closed = t.profit !== null;
-            return (
-              <div 
-                key={t.id} 
-                className={`journal-card ${selectedTrade?.id === t.id ? 'active' : ''}`}
-                onClick={() => setSelectedTrade(t)}
-              >
-                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 8}}>
-                  <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
-                    <span className="symbol-chip">{t.symbol}</span>
-                    {!isJournaled(t) && <span className="badge badge-short" style={{fontSize: 10}}>NEW</span>}
+          <AnimatePresence>
+            {filteredTrades.map(t => {
+              const won = t.profit !== null && Number(t.profit) >= 0;
+              const closed = t.profit !== null;
+              const isActive = selectedTrade?.id === t.id;
+              
+              return (
+                <motion.div 
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  key={t.id} 
+                  className={`journal-card ${isActive ? 'active' : ''}`}
+                  onClick={() => setSelectedTrade(t)}
+                  style={{ padding: '16px' }}
+                >
+                  <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 12}}>
+                    <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                      <span className="symbol-chip">{t.symbol}</span>
+                      {!isJournaled(t) && <span className="badge badge-short" style={{fontSize: 10}}>NEW</span>}
+                    </div>
+                    {isJournaled(t) && <span className="badge badge-long" style={{fontSize: 10}}>JOURNALED</span>}
                   </div>
-                  {isJournaled(t) && <span className="badge badge-long" style={{fontSize: 10, background: 'var(--accent)', color: 'white'}}>JOURNALED</span>}
-                </div>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end'}}>
-                  <div>
-                    <span className={t.trade_type === 'long' ? 'text-pos' : 'text-neg'} style={{fontWeight: 600, fontSize: 13, marginRight: 8}}>
-                      {t.trade_type.charAt(0).toUpperCase() + t.trade_type.slice(1)}
-                    </span>
-                    <span className="muted" style={{fontSize: 13}}>${t.open_price}</span>
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className={t.trade_type === 'long' ? 'text-pos' : 'text-neg'} style={{fontWeight: 600, fontSize: 13}}>
+                        {t.trade_type.charAt(0).toUpperCase() + t.trade_type.slice(1)}
+                      </span>
+                      <span className="muted" style={{fontSize: 13}}>{t.open_price}</span>
+                    </div>
+                    {closed ? (
+                      <span className={won ? 'text-pos' : 'text-neg'} style={{fontWeight: 700, fontSize: '14px'}}>
+                        {won ? '+' : ''}${Number(t.profit).toFixed(2)}
+                      </span>
+                    ) : (
+                      <span className="badge badge-neutral">Open</span>
+                    )}
                   </div>
-                  {closed ? (
-                    <span className={won ? 'text-pos' : 'text-neg'} style={{fontWeight: 700}}>
-                      {won ? '+' : ''}${Number(t.profit).toFixed(2)}
-                    </span>
-                  ) : (
-                    <span className="muted" style={{fontSize: 13}}>Open</span>
-                  )}
-                </div>
-                <div className="muted" style={{fontSize: 12, marginTop: 8}}>
-                  {new Date(t.entry_date).toLocaleString()}
-                </div>
-              </div>
-            );
-          })}
+                  <div className="muted" style={{fontSize: 12, marginTop: 12}}>
+                    {new Date(t.entry_date).toLocaleDateString()} at {new Date(t.entry_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="journal-content">
         {!sidebarOpen && (
-          <button className="btn-ghost sidebar-toggle" onClick={() => setSidebarOpen(true)}>
-            ☰ Show Trades
+          <button className="btn btn-ghost sidebar-toggle" onClick={() => setSidebarOpen(true)} style={{ position: 'absolute', top: '24px', left: '24px', zIndex: 10, padding: '8px 16px' }}>
+            <Menu size={16} /> Show Trades
           </button>
         )}
 
         {!selectedTrade ? (
-          <div className="journal-empty">
-            <h2>Select a trade to journal</h2>
-            <p className="muted">Click on a trade from the sidebar to view and edit its journal entry.</p>
+          <div className="center" style={{ flexDirection: 'column', height: '100%', color: 'var(--muted)', gap: '16px' }}>
+            <div style={{ width: '64px', height: '64px', background: 'var(--bg-hover)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PenLine size={32} />
+            </div>
+            <h2 style={{ color: 'var(--text)', margin: 0 }}>Select a trade to journal</h2>
+            <p style={{ margin: 0 }}>Click on a trade from the sidebar to view and edit its journal entry.</p>
           </div>
         ) : (
-          <div className="journal-editor">
-            {/* Header */}
+          <motion.div 
+            className="journal-editor"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            key={selectedTrade.id}
+          >
             <div className="editor-header">
-              <div className="editor-title">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <span className="symbol-large">{selectedTrade.symbol}</span>
                 {selectedTrade.profit !== null && (
-                  <span className={`badge ${Number(selectedTrade.profit) >= 0 ? 'badge-long' : 'badge-short'}`} style={{fontSize: 14}}>
+                  <span className={`badge ${Number(selectedTrade.profit) >= 0 ? 'badge-long' : 'badge-short'}`} style={{fontSize: 13, padding: '4px 12px'}}>
                     {Number(selectedTrade.profit) >= 0 ? 'WINNER' : 'LOSER'}
                   </span>
                 )}
               </div>
-              <div className="editor-actions">
-                <button className="btn-primary" onClick={handleSave} disabled={saving}>
+              <div>
+                <button className="btn btn-primary" onClick={handleSave} disabled={saving} style={{ padding: '10px 20px' }}>
+                  <Save size={16} />
                   {saving ? 'Saving...' : 'Save Journal'}
                 </button>
               </div>
             </div>
 
-            <div className="editor-meta muted">
-              <span className={selectedTrade.trade_type === 'long' ? 'text-pos' : 'text-neg'}>
+            <div className="editor-meta muted" style={{ display: 'flex', gap: '12px', fontSize: '13px', marginBottom: '40px' }}>
+              <span className={selectedTrade.trade_type === 'long' ? 'text-pos' : 'text-neg'} style={{ fontWeight: 600 }}>
                 {selectedTrade.trade_type.charAt(0).toUpperCase() + selectedTrade.trade_type.slice(1)}
               </span>
-              <span> • Entry {selectedTrade.open_price}</span>
-              <span> • Size {selectedTrade.volume}</span>
-              <span> • {new Date(selectedTrade.entry_date).toLocaleString()}</span>
+              <span>•</span>
+              <span>Entry {selectedTrade.open_price}</span>
+              <span>•</span>
+              <span>Size {selectedTrade.volume}</span>
+              <span>•</span>
+              <span>{new Date(selectedTrade.entry_date).toLocaleString()}</span>
             </div>
 
-            {/* Form Fields */}
-            <div className="editor-body stack" style={{gap: '24px', marginTop: '32px'}}>
-              <div className="journal-field">
-                <label>
-                  <span className="icon">📝</span> PRE-TRADE ANALYSIS
+            <div className="stack" style={{ gap: '24px' }}>
+              <div className="journal-field card">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>
+                  <PenLine size={16} style={{ color: 'var(--accent)' }} /> PRE-TRADE ANALYSIS
                 </label>
                 <textarea 
                   value={preTrade} 
                   onChange={e => setPreTrade(e.target.value)} 
                   placeholder="What did you see? Plan, thesis, levels, risk..." 
-                  rows={4}
+                  style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--text)', fontSize: '15px', lineHeight: 1.6, resize: 'vertical', minHeight: '100px', outline: 'none' }}
                 />
               </div>
 
-              <div className="journal-field">
-                <label>
-                  <span className="icon">✓</span> POST-TRADE REVIEW
+              <div className="journal-field card">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>
+                  <CheckCircle2 size={16} style={{ color: 'var(--pos)' }} /> POST-TRADE REVIEW
                 </label>
                 <textarea 
                   value={postTrade} 
                   onChange={e => setPostTrade(e.target.value)} 
                   placeholder="What happened? Execution, slippage, improvements..." 
-                  rows={4}
+                  style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--text)', fontSize: '15px', lineHeight: 1.6, resize: 'vertical', minHeight: '100px', outline: 'none' }}
                 />
               </div>
 
-              <div className="journal-field risk-reward">
-                <label>
-                  <span className="icon">⚖️</span> RISK : REWARD
+              <div className="journal-field card">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>
+                  <Scale size={16} style={{ color: 'var(--warn)' }} /> RISK : REWARD
                 </label>
-                <div className="rr-inputs">
-                  <input type="number" value={risk} onChange={e => setRisk(e.target.value)} placeholder="1" />
-                  <span>:</span>
-                  <input type="number" value={reward} onChange={e => setReward(e.target.value)} placeholder="2" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <input type="number" className="form-input" value={risk} onChange={e => setRisk(e.target.value)} placeholder="1" style={{ width: '80px', textAlign: 'center', fontWeight: 600 }} />
+                  <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--muted)' }}>:</span>
+                  <input type="number" className="form-input" value={reward} onChange={e => setReward(e.target.value)} placeholder="2" style={{ width: '80px', textAlign: 'center', fontWeight: 600 }} />
                 </div>
               </div>
 
-              <div className="journal-field">
-                <label>
-                  <span className="icon">🧠</span> EMOTIONS
+              <div className="journal-field card">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>
+                  <BrainCircuit size={16} style={{ color: 'var(--info)' }} /> EMOTIONS
                 </label>
-                <div className="emotion-tags">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
                   {EMOTION_OPTIONS.map(emo => (
                     <button 
                       key={emo}
@@ -259,20 +284,20 @@ export default function Journal() {
                 </div>
               </div>
 
-              <div className="journal-field">
-                <label>
-                  <span className="icon">💡</span> LESSONS LEARNED
+              <div className="journal-field card">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>
+                  <Lightbulb size={16} style={{ color: '#f59e0b' }} /> LESSONS LEARNED
                 </label>
                 <textarea 
                   value={lessons} 
                   onChange={e => setLessons(e.target.value)} 
                   placeholder="Key takeaways for the next trade..." 
-                  rows={3}
+                  style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--text)', fontSize: '15px', lineHeight: 1.6, resize: 'vertical', minHeight: '100px', outline: 'none' }}
                 />
               </div>
 
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
     </div>

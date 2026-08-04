@@ -2,8 +2,16 @@ import React, { useState } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Upload, 
+  FileText, 
+  CheckCircle2, 
+  AlertCircle, 
+  TableProperties,
+  ArrowRight
+} from 'lucide-react';
 
-// Standard contract sizes per lot (same as TradeLog)
 const CONTRACT_SIZES = {
   XAUUSD: 100, XAGUSD: 5000, XAUEUR: 100, XAUGBP: 100,
   USOIL: 1000, UKOIL: 1000, WTI: 1000, BRENT: 1000, CRUDEOIL: 1000,
@@ -28,23 +36,31 @@ function getContractSize(symbol) {
   return 1;
 }
 
-// Expected CSV headers: symbol,trade_type,open_price,close_price,volume,entry_date,exit_date,notes
 export default function Import() {
   const { user } = useAuth();
   const [preview, setPreview] = useState([]);
   const [status, setStatus] = useState('');
+  const [error, setError] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [file, setFile] = useState(null);
 
   function handleFile(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    Papa.parse(file, {
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+    setFile(selectedFile);
+    setStatus('');
+    setError('');
+    
+    Papa.parse(selectedFile, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
+        if (results.errors.length > 0) {
+          setError(`Parse warning: ${results.errors[0].message}`);
+        }
         setPreview(results.data);
-        setStatus(`Parsed ${results.data.length} rows. Review below, then import.`);
       },
-      error: (err) => setStatus(`Parse error: ${err.message}`),
+      error: (err) => setError(`Parse error: ${err.message}`),
     });
   }
 
@@ -62,7 +78,10 @@ export default function Import() {
   }
 
   async function handleImport() {
+    setIsImporting(true);
     setStatus('Importing...');
+    setError('');
+
     const rows = preview.map((r) => {
       const symbol = (r.symbol || '').toUpperCase();
       const tradeType = (r.trade_type || r.side || 'long').toLowerCase();
@@ -84,48 +103,134 @@ export default function Import() {
       };
     }).filter((r) => r.symbol && r.open_price && r.volume && r.entry_date);
 
+    if (rows.length === 0) {
+      setError("No valid trades found to import. Check your column headers.");
+      setIsImporting(false);
+      return;
+    }
+
     const { error } = await supabase.from('trades').insert(rows);
     if (error) {
-      setStatus(`Import failed: ${error.message}`);
+      setError(`Import failed: ${error.message}`);
+      setStatus('');
     } else {
-      setStatus(`Imported ${rows.length} trades.`);
+      setStatus(`Successfully imported ${rows.length} trades.`);
       setPreview([]);
+      setFile(null);
     }
+    setIsImporting(false);
   }
 
   return (
-    <div className="stack">
-      <h1>Import trades</h1>
-      <div className="card">
-        <p className="muted">
-          CSV columns expected: <code>symbol, trade_type, open_price, close_price, volume, entry_date, exit_date, notes</code>.
-          Dates as YYYY-MM-DD. trade_type is "long" or "short".
-          <br />
-          <em>Legacy format also accepted: side, entry_price, exit_price, size.</em>
-          <br />
-          <em>PnL is auto-calculated using standard contract sizes (Gold=100oz, Forex=100K, etc.).</em>
-        </p>
-        <input type="file" accept=".csv" onChange={handleFile} />
-        {status && <div className="info">{status}</div>}
-        {preview.length > 0 && (
-          <>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>{Object.keys(preview[0]).map((k) => <th key={k}>{k}</th>)}</tr>
-                </thead>
-                <tbody>
-                  {preview.slice(0, 10).map((row, i) => (
-                    <tr key={i}>{Object.values(row).map((v, j) => <td key={j}>{v}</td>)}</tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="muted">Showing first 10 of {preview.length} rows.</p>
-            <button className="btn-primary" onClick={handleImport}>Import {preview.length} rows</button>
-          </>
-        )}
+    <motion.div 
+      className="stack"
+      style={{ maxWidth: '1000px', margin: '0 auto', padding: '24px' }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="calendar-page-header" style={{ marginBottom: '32px' }}>
+        <div className="calendar-page-title">
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
+            <Upload size={28} style={{ color: 'var(--muted)' }} /> 
+            Import Trades
+          </h1>
+          <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: '14px' }}>Bulk upload your trade history via CSV</p>
+        </div>
       </div>
-    </div>
+
+      <div className="card stack" style={{ gap: '24px' }}>
+        <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '24px' }}>
+          <h3 style={{ marginTop: 0, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FileText size={18} /> Format Requirements
+          </h3>
+          <p className="muted" style={{ fontSize: '14px', lineHeight: 1.6, marginBottom: '16px' }}>
+            Your CSV must contain the following columns:<br/>
+            <code style={{ background: 'var(--bg-hover)', padding: '4px 8px', borderRadius: '4px', color: 'var(--text)' }}>symbol, trade_type, open_price, close_price, volume, entry_date, exit_date, notes</code>
+          </p>
+          <ul className="muted" style={{ fontSize: '13px', margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <li><strong>trade_type</strong> must be exactly "long" or "short".</li>
+            <li><strong>dates</strong> should be in YYYY-MM-DD HH:MM:SS format (ISO 8601 preferred).</li>
+            <li><strong>close_price</strong> and <strong>exit_date</strong> can be left blank for open trades.</li>
+            <li>Legacy formats (side, entry_price, size) are also supported.</li>
+            <li>PnL is auto-calculated using standard contract sizes.</li>
+          </ul>
+        </div>
+
+        <div style={{ position: 'relative', border: '2px dashed var(--border)', borderRadius: 'var(--radius-md)', padding: '40px 20px', textAlign: 'center', background: 'var(--bg)' }}>
+          <input 
+            type="file" 
+            accept=".csv" 
+            onChange={handleFile} 
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+            title="Upload CSV"
+          />
+          <Upload size={32} style={{ color: 'var(--muted)', marginBottom: '16px' }} />
+          <h3 style={{ margin: '0 0 8px 0', fontSize: '16px' }}>
+            {file ? file.name : "Click or drag CSV file to upload"}
+          </h3>
+          <p className="muted" style={{ margin: 0, fontSize: '14px' }}>
+            {file ? "File selected. Review data below before importing." : "Maximum file size: 5MB"}
+          </p>
+        </div>
+
+        {error && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--neg)', background: 'var(--neg-soft)', padding: '16px', borderRadius: 'var(--radius-sm)', fontSize: '14px' }}>
+            <AlertCircle size={18} /> {error}
+          </motion.div>
+        )}
+        
+        {status && !error && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--pos)', background: 'var(--pos-soft)', padding: '16px', borderRadius: 'var(--radius-sm)', fontSize: '14px' }}>
+            <CheckCircle2 size={18} /> {status}
+          </motion.div>
+        )}
+
+        <AnimatePresence>
+          {preview.length > 0 && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }} 
+              animate={{ opacity: 1, height: 'auto' }} 
+              exit={{ opacity: 0, height: 0 }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <TableProperties size={18} /> Data Preview
+                </h3>
+                <span className="muted" style={{ fontSize: '13px' }}>
+                  Found {preview.length} rows (showing first 5)
+                </span>
+              </div>
+              
+              <div className="table-wrap" style={{ marginBottom: '24px', border: '1px solid var(--border)' }}>
+                <table>
+                  <thead>
+                    <tr>{Object.keys(preview[0]).map((k) => <th key={k} style={{ textTransform: 'none' }}>{k}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {preview.slice(0, 5).map((row, i) => (
+                      <tr key={i}>{Object.values(row).map((v, j) => <td key={j} style={{ whiteSpace: 'nowrap' }}>{v}</td>)}</tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={handleImport}
+                  disabled={isImporting}
+                  style={{ padding: '12px 24px' }}
+                >
+                  {isImporting ? 'Importing...' : `Import ${preview.length} Trades`}
+                  {!isImporting && <ArrowRight size={16} />}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
   );
 }

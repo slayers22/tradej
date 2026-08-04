@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, ClipboardList, TrendingUp, TrendingDown } from 'lucide-react';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
@@ -17,32 +19,28 @@ export default function CalendarPage() {
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
   const firstDay = new Date(year, month, 1);
-  // Get 0-indexed day, Monday = 0
   const startOffset = (firstDay.getDay() + 6) % 7; 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  // Group trades by date string YYYY-MM-DD
   const tradesByDate = useMemo(() => {
     const map = {};
     trades.forEach((t) => {
       if (!t.entry_date) return;
-      if (!map[t.entry_date]) map[t.entry_date] = { trades: [], pnl: 0 };
-      map[t.entry_date].trades.push(t);
+      const dateOnly = t.entry_date.split('T')[0];
+      if (!map[dateOnly]) map[dateOnly] = { trades: [], pnl: 0 };
+      map[dateOnly].trades.push(t);
       if (t.profit != null) {
-        map[t.entry_date].pnl += Number(t.profit);
+        map[dateOnly].pnl += Number(t.profit);
       }
     });
     return map;
   }, [trades]);
 
-  // Build the grid cells, including weekly summaries
   const weeks = [];
   let currentWeek = [];
   
-  // Padding for start of month
   for (let i = 0; i < startOffset; i++) currentWeek.push(null);
   
-  // Actual days
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     currentWeek.push({ day: d, dateStr });
@@ -53,30 +51,40 @@ export default function CalendarPage() {
     }
   }
   
-  // Padding for end of month
   if (currentWeek.length > 0) {
     while (currentWeek.length < 7) currentWeek.push(null);
     weeks.push(currentWeek);
   }
 
   return (
-    <div className="stack">
-      
+    <motion.div 
+      className="stack"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       <div className="calendar-page-header">
         <div className="calendar-page-title">
-          <h1><span style={{color: 'var(--muted)'}}>📅</span> Trading Calendar</h1>
-          <p>Daily P&L heatmap - Click on days to see trades</p>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
+            <CalendarIcon size={28} style={{ color: 'var(--muted)' }} /> 
+            Trading Calendar
+          </h1>
+          <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: '14px' }}>Daily P&L heatmap - Click on days to see trades</p>
         </div>
-        <div className="calendar-nav">
-          <button onClick={() => setCursor(new Date(year, month - 1, 1))}>&lsaquo;</button>
-          <span>{cursor.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
-          <button onClick={() => setCursor(new Date(year, month + 1, 1))}>&rsaquo;</button>
+        <div className="calendar-nav" style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-full)', padding: '6px' }}>
+          <button className="btn btn-ghost" style={{ padding: '6px', borderRadius: 'var(--radius-full)' }} onClick={() => setCursor(new Date(year, month - 1, 1))}>
+            <ChevronLeft size={16} />
+          </button>
+          <span style={{ fontWeight: 600, fontSize: '14px', minWidth: '120px', textAlign: 'center' }}>
+            {cursor.toLocaleString('default', { month: 'long', year: 'numeric' })}
+          </span>
+          <button className="btn btn-ghost" style={{ padding: '6px', borderRadius: 'var(--radius-full)' }} onClick={() => setCursor(new Date(year, month + 1, 1))}>
+            <ChevronRight size={16} />
+          </button>
         </div>
       </div>
 
       <div className="calendar-layout">
-        
-        {/* Left Column - Main Grid */}
         <div className="calendar-grid-wrapper">
           <div className="calendar-grid-header">
             {DAYS.map((d) => <div key={d}>{d}</div>)}
@@ -85,7 +93,6 @@ export default function CalendarPage() {
           
           <div className="calendar-grid-body">
             {weeks.map((week, wIdx) => {
-              // Calculate weekly totals
               let weeklyPnl = 0;
               let tradedDays = 0;
               
@@ -111,91 +118,108 @@ export default function CalendarPage() {
                     }
 
                     return (
-                      <div key={cIdx} className={cls} onClick={() => setSelectedDate(cell.dateStr)}>
+                      <motion.div 
+                        key={cIdx} 
+                        className={cls} 
+                        onClick={() => setSelectedDate(cell.dateStr)}
+                        whileHover={{ scale: pnl != null || selectedDate === cell.dateStr ? 1.02 : 1 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
                         <div className="cal-day-num">{cell.day}</div>
                         {pnl != null && (
                           <div className="cal-day-pnl">
                             {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}
                           </div>
                         )}
-                      </div>
+                      </motion.div>
                     );
                   })}
                   
-                  {/* Weekly Summary Cell */}
-                  <div className="cal-weekly-cell">
-                    <div className="cal-weekly-title">WEEKLY</div>
-                    <div className={`cal-weekly-pnl ${weeklyPnl >= 0 ? 'pnl-pos' : 'pnl-neg'}`}>
+                  <div className="cal-weekly-cell" style={{ background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="cal-weekly-title" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.05em' }}>WEEKLY</div>
+                    <div className={weeklyPnl >= 0 ? 'text-pos' : 'text-neg'} style={{ fontSize: '15px', fontWeight: 700, marginTop: '4px' }}>
                       {weeklyPnl >= 0 ? '+' : ''}${weeklyPnl.toFixed(2)}
                     </div>
-                    <div className="cal-weekly-sub">Traded Days {tradedDays}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>Traded Days {tradedDays}</div>
                   </div>
                 </React.Fragment>
               );
             })}
           </div>
 
-          <div className="calendar-legend">
-            <div className="legend-item">
-              <span className="legend-dot" style={{background: 'var(--pos)'}}></span> Profitable Day
+          <div className="calendar-legend" style={{ display: 'flex', justifyContent: 'center', gap: '24px', padding: '24px', borderTop: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--pos)' }}></span> Profitable Day
             </div>
-            <div className="legend-item">
-              <span className="legend-dot" style={{background: 'var(--neg)'}}></span> Losing Day
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--neg)' }}></span> Losing Day
             </div>
-            <div className="legend-item">
-              <span className="legend-dot" style={{background: '#cbd5e1'}}></span> No Trades
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--border)' }}></span> No Trades
             </div>
           </div>
         </div>
 
-        {/* Right Column - Day Trades panel */}
-        <div className="calendar-sidebar">
-          <div className="cal-sidebar-header">
-            <span style={{color: 'var(--accent)'}}>📋</span> Day Trades
+        <div className="calendar-sidebar card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="cal-sidebar-header" style={{ padding: '20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+            <ClipboardList size={18} style={{ color: 'var(--info)' }} /> Day Trades
           </div>
-          <div className="cal-sidebar-body">
-            {!selectedDate ? (
-              <div className="cal-sidebar-empty">
-                <div className="cal-sidebar-empty-icon">📅</div>
-                <div>Click on a day with trades<br/>to view details</div>
-              </div>
-            ) : (
-              <div>
-                <h3 style={{marginTop: 0, marginBottom: 16, fontSize: 16}}>
-                  {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                </h3>
-                
-                {(!tradesByDate[selectedDate] || tradesByDate[selectedDate].trades.length === 0) ? (
-                  <p className="muted">No trades taken on this day.</p>
-                ) : (
-                  <div className="stack" style={{gap: 12}}>
-                    {tradesByDate[selectedDate].trades.map((t) => (
-                      <div key={t.id} style={{background: 'var(--bg)', padding: 12, borderRadius: 12}}>
-                        <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 8}}>
-                          <strong style={{display: 'flex', alignItems: 'center', gap: 6}}>
-                            {t.symbol}
-                            <span className={t.trade_type === 'long' ? 'badge badge-long' : 'badge badge-short'} style={{fontSize: 9, padding: '2px 6px'}}>
-                              {t.trade_type}
-                            </span>
-                          </strong>
-                          <strong className={Number(t.profit) >= 0 ? 'pnl-pos' : 'pnl-neg'}>
-                            {Number(t.profit) >= 0 ? '+' : ''}${Number(t.profit).toFixed(2)}
-                          </strong>
-                        </div>
-                        <div style={{display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--muted)'}}>
-                          <span>{t.volume} lots</span>
-                          <span>Entry: {t.open_price} {t.close_price ? ` → Exit: ${t.close_price}` : ''}</span>
-                        </div>
-                      </div>
-                    ))}
+          <div className="cal-sidebar-body" style={{ padding: '20px' }}>
+            <AnimatePresence mode="wait">
+              {!selectedDate ? (
+                <motion.div 
+                  key="empty"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="cal-sidebar-empty" 
+                  style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}
+                >
+                  <div style={{ width: '64px', height: '64px', background: 'var(--bg)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <CalendarIcon size={24} />
                   </div>
-                )}
-              </div>
-            )}
+                  <div>Click on a day with trades<br/>to view details</div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="content"
+                  initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                >
+                  <h3 style={{marginTop: 0, marginBottom: 20, fontSize: 16}}>
+                    {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </h3>
+                  
+                  {(!tradesByDate[selectedDate] || tradesByDate[selectedDate].trades.length === 0) ? (
+                    <p className="muted">No trades taken on this day.</p>
+                  ) : (
+                    <div className="stack" style={{gap: 12}}>
+                      {tradesByDate[selectedDate].trades.map((t) => (
+                        <div key={t.id} style={{background: 'var(--bg)', border: '1px solid var(--border)', padding: '16px', borderRadius: 'var(--radius-md)'}}>
+                          <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 12}}>
+                            <strong style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                              {t.symbol}
+                              <span className={t.trade_type === 'long' ? 'badge badge-long' : 'badge badge-short'} style={{display: 'inline-flex', alignItems: 'center', gap: '4px'}}>
+                                {t.trade_type === 'long' ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                                {t.trade_type}
+                              </span>
+                            </strong>
+                            <strong className={Number(t.profit) >= 0 ? 'text-pos' : 'text-neg'}>
+                              {Number(t.profit) >= 0 ? '+' : ''}${Number(t.profit).toFixed(2)}
+                            </strong>
+                          </div>
+                          <div style={{display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--muted)'}}>
+                            <span>{t.volume} lots</span>
+                            <span>Entry: {t.open_price} {t.close_price ? ` → Exit: ${t.close_price}` : ''}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
       </div>
-    </div>
+    </motion.div>
   );
 }
