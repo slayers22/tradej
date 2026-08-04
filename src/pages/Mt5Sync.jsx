@@ -23,7 +23,7 @@ export default function Mt5Sync() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from('mt5_connections_safe').select('*').eq('user_id', user.id).maybeSingle();
+    const { data } = await supabase.from('mt5_connections').select('*').eq('user_id', user.id).maybeSingle();
     setConn(data);
     setLoading(false);
   }
