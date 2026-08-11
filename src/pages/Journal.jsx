@@ -128,7 +128,7 @@ export default function Journal() {
           </button>
         </div>
 
-        <div className="journal-list" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div className="journal-list">
           {loading && <div className="center" style={{padding: 20}}>Loading...</div>}
           {!loading && filteredTrades.length === 0 && <div className="muted" style={{padding: 20, textAlign: 'center'}}>No trades found.</div>}
           <AnimatePresence>
