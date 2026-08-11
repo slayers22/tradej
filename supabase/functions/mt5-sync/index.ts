@@ -41,17 +41,19 @@ serve(async (req) => {
       });
     }
 
-    // Map trades to DB schema
-    const trades = incomingTrades.map((row: any) => {
+    // Map trades to DB schema and deduplicate incoming batch
+    const tradesMap = new Map();
+    incomingTrades.forEach((row: any) => {
       const entryDate = new Date(row.open_time * 1000); // MQL5 sends timestamps in seconds
       const closeDate = new Date(row.close_time * 1000);
+      const ticket = row.ticket.toString();
       
-      return {
+      tradesMap.set(ticket, {
         user_id: conn.user_id,
-        mt5_ticket: row.ticket.toString(),
+        mt5_ticket: ticket,
         source: 'mt5',
         symbol: row.symbol,
-        trade_type: row.type.toLowerCase().includes('sell') ? 'short' : 'long',
+        trade_type: (row.type.toLowerCase().includes('sell') || row.type.toLowerCase().includes('short')) ? 'short' : 'long',
         volume: parseFloat(row.volume || '0'),
         open_price: parseFloat(row.open_price || '0'),
         close_price: parseFloat(row.close_price || '0'),
@@ -60,8 +62,10 @@ serve(async (req) => {
         exit_date: closeDate.toISOString().split('T')[0],
         open_time: entryDate.toISOString(),
         close_time: closeDate.toISOString(),
-      };
+      });
     });
+    
+    const trades = Array.from(tradesMap.values());
 
     // Filter out trades that already exist
     const tickets = trades.map((t: any) => t.mt5_ticket);
