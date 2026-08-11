@@ -84,7 +84,7 @@ export default function Dashboard() {
       .sort((a, b) => b.pnl - a.pnl)
       .slice(0, 5);
 
-    const recentActivity = [...closed].sort((a, b) => new Date(b.entry_date) - new Date(a.entry_date)).slice(0, 5);
+    const recentActivity = [...closed].sort((a, b) => new Date(b.entry_date) - new Date(a.entry_date)).slice(0, 3);
 
     const now = new Date();
     const currYear = now.getFullYear();

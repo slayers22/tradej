@@ -1026,17 +1026,38 @@ tbody tr:hover {
 }
 
 /* Calendar Specifics */
+.calendar-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
 .calendar-grid-wrapper {
+  flex: 1;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow-x: auto;
 }
 
+.calendar-sidebar {
+  width: 320px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .calendar-layout {
+    flex-direction: column;
+  }
+  .calendar-sidebar {
+    width: 100%;
+  }
+}
+
 .calendar-grid-header {
   display: grid;
   grid-template-columns: repeat(7, 1fr) 1fr;
-  min-width: 800px;
+  min-width: 700px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -1053,8 +1074,8 @@ tbody tr:hover {
 .calendar-grid-body {
   display: grid;
   grid-template-columns: repeat(7, 1fr) 1fr;
-  min-width: 800px;
-  grid-auto-rows: minmax(100px, auto);
+  min-width: 700px;
+  grid-auto-rows: minmax(80px, auto);
 }
 
 .cal-day-cell {
