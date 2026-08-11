@@ -10,7 +10,12 @@ import {
   Scale, 
   ChevronLeft, 
   Menu,
-  Save
+  Save,
+  Star,
+  ListTodo,
+  Tag,
+  Plus,
+  X
 } from 'lucide-react';
 
 const EMOTION_OPTIONS = ['FOMO', 'Greed', 'Fear', 'Patient', 'Confident', 'Anxious', 'Revenge'];
@@ -30,6 +35,11 @@ export default function Journal() {
   const [risk, setRisk] = useState('');
   const [reward, setReward] = useState('');
   const [emotions, setEmotions] = useState([]);
+  
+  const [tags, setTags] = useState([]);
+  const [tagInput, setTagInput] = useState('');
+  const [rating, setRating] = useState(0);
+  const [checklist, setChecklist] = useState({ trend: false, level: false, news: false, rr: false });
 
   async function load() {
     setLoading(true);
@@ -54,6 +64,9 @@ export default function Journal() {
       setReward(rr[1] || '');
       
       setEmotions(selectedTrade.emotions || []);
+      setTags(selectedTrade.tags || []);
+      setRating(selectedTrade.rating || 0);
+      setChecklist(selectedTrade.checklist || { trend: false, level: false, news: false, rr: false });
     }
   }, [selectedTrade]);
 
@@ -67,7 +80,10 @@ export default function Journal() {
       post_trade_review: postTrade,
       lessons_learned: lessons,
       risk_reward: riskReward,
-      emotions: emotions
+      emotions: emotions,
+      tags: tags,
+      rating: rating,
+      checklist: checklist
     };
 
     const { error } = await supabase
@@ -267,6 +283,65 @@ export default function Journal() {
                 </div>
               </div>
 
+              {/* TAGS */}
+              <div className="journal-field card">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>
+                  <Tag size={16} style={{ color: 'var(--info)' }} /> TAGS
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                  {tags.map(t => (
+                    <div key={t} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-hover)', padding: '4px 12px', borderRadius: '16px', fontSize: '13px' }}>
+                      #{t}
+                      <button className="btn-ghost" onClick={() => setTags(tags.filter(tag => tag !== t))} style={{ padding: 2, marginLeft: 4, background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input type="text" className="form-input" placeholder="e.g. Breakout, News" value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (tagInput.trim() && !tags.includes(tagInput.trim())) { setTags([...tags, tagInput.trim()]); setTagInput(''); } } }} />
+                  <button className="btn btn-ghost" onClick={() => { if (tagInput.trim() && !tags.includes(tagInput.trim())) { setTags([...tags, tagInput.trim()]); setTagInput(''); } }}>
+                    <Plus size={16} /> Add
+                  </button>
+                </div>
+              </div>
+
+              {/* RATING */}
+              <div className="journal-field card">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>
+                  <Star size={16} style={{ color: '#f59e0b' }} /> TRADE RATING
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button key={star} onClick={() => setRating(star)} className="btn-ghost" style={{ padding: '4px', color: rating >= star ? '#f59e0b' : 'var(--border)', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                      <Star size={24} fill={rating >= star ? '#f59e0b' : 'none'} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* CHECKLIST */}
+              <div className="journal-field card">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>
+                  <ListTodo size={16} style={{ color: 'var(--pos)' }} /> PRE-TRADE CHECKLIST
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {[
+                    { id: 'trend', label: 'Trend Aligned (HTF)' },
+                    { id: 'level', label: 'Key Level Interaction' },
+                    { id: 'news', label: 'No Major News Impact' },
+                    { id: 'rr', label: 'Valid Risk/Reward (>= 1:2)' }
+                  ].map(item => (
+                    <label key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={checklist[item.id] || false} onChange={e => setChecklist({ ...checklist, [item.id]: e.target.checked })} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
+                      <span style={{ fontSize: '14px', color: checklist[item.id] ? 'var(--text)' : 'var(--muted)', textDecoration: checklist[item.id] ? 'line-through' : 'none' }}>
+                        {item.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               <div className="journal-field card">
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>
                   <BrainCircuit size={16} style={{ color: 'var(--info)' }} /> EMOTIONS
@@ -294,6 +369,46 @@ export default function Journal() {
                   placeholder="Key takeaways for the next trade..." 
                   style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--text)', fontSize: '15px', lineHeight: 1.6, resize: 'vertical', minHeight: '100px', outline: 'none' }}
                 />
+              </div>
+
+              {/* SCREENSHOTS */}
+              <div className="journal-field card">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>
+                  <PenLine size={16} style={{ color: 'var(--info)' }} /> SCREENSHOTS
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    {(selectedTrade.screenshots || []).map((url, i) => (
+                      <a key={i} href={url} target="_blank" rel="noreferrer" style={{ display: 'block', width: '100px', height: '60px', background: 'var(--bg-hover)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                        <img src={url} alt="Trade Screenshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </a>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
+                    <em>* Note: To enable screenshot uploads, you must first create a public storage bucket named <strong>"screenshots"</strong> in your Supabase Dashboard.</em>
+                  </div>
+                  <input type="file" accept="image/*" onChange={async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    try {
+                      const fileExt = file.name.split('.').pop();
+                      const fileName = `${selectedTrade.id}-${Math.random()}.${fileExt}`;
+                      
+                      const { data, error } = await supabase.storage.from('screenshots').upload(fileName, file);
+                      if (error) throw error;
+                      
+                      const { data: publicData } = supabase.storage.from('screenshots').getPublicUrl(fileName);
+                      const newScreenshots = [...(selectedTrade.screenshots || []), publicData.publicUrl];
+                      
+                      // Auto-save the screenshot
+                      await supabase.from('trades').update({ screenshots: newScreenshots }).eq('id', selectedTrade.id);
+                      setSelectedTrade({ ...selectedTrade, screenshots: newScreenshots });
+                      
+                    } catch (err) {
+                      alert("Upload failed. Make sure you have created the 'screenshots' bucket in Supabase and set it to public! Error: " + err.message);
+                    }
+                  }} />
+                </div>
               </div>
 
             </div>
